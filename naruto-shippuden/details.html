@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Details - Naruto Shippuden</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navigation"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading details...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="error-container" style="display: none;">
+        <div class="error-content">
+            <h2>Oops! Something went wrong</h2>
+            <p id="error-message"></p>
+            <button id="retry-btn" class="retry-btn">Retry</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" style="display: none;">
+        <!-- Hero Section -->
+        <section id="hero-section" class="hero-section">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 id="hero-title" class="hero-title"></h1>
+                <p id="hero-title-jp" class="hero-title-jp"></p>
+            </div>
+        </section>
+
+        <!-- Details Section -->
+        <section class="details-section">
+            <div class="container">
+                <!-- Synopsis -->
+                <div id="synopsis-section" class="info-section">
+                    <h2 class="section-title">Synopsis</h2>
+                    <p id="synopsis-text" class="synopsis-text"></p>
+                </div>
+
+                <!-- Background -->
+                <div id="background-section" class="info-section">
+                    <h2 class="section-title">Background</h2>
+                    <p id="background-text" class="synopsis-text"></p>
+                </div>
+
+                <!-- Key Information Cards -->
+                <div id="info-cards-section" class="info-section">
+                    <h2 class="section-title">Information</h2>
+                    <div id="info-cards" class="info-cards-grid"></div>
+                </div>
+
+                <!-- Statistics -->
+                <div id="statistics-section" class="info-section">
+                    <h2 class="section-title">Statistics</h2>
+                    <div id="statistics-content" class="statistics-grid"></div>
+                </div>
+
+                <!-- Staff Section -->
+                <div id="staff-section" class="info-section">
+                    <h2 class="section-title">Production Staff</h2>
+                    <div id="staff-grid" class="staff-grid"></div>
+                </div>
+
+                <!-- Reviews Section -->
+                <div id="reviews-section" class="info-section">
+                    <h2 class="section-title">Reviews</h2>
+                    <div id="reviews-list" class="reviews-list"></div>
+                    <div id="reviews-pagination" class="pagination" style="display: none;">
+                        <button id="prev-reviews" class="pagination-btn">Previous</button>
+                        <span id="reviews-page-info" class="page-info"></span>
+                        <button id="next-reviews" class="pagination-btn">Next</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="scripts/api.js"></script>
+    <script src="scripts/navigation.js"></script>
+    <script src="scripts/ui.js"></script>
+    <script>
+        let currentReviewsPage = 1;
+
+        async function loadDetails() {
+            try {
+                document.getElementById('loading').style.display = 'flex';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('main-content').style.display = 'none';
+
+                const animeId = 1735;
+                
+                // Fetch all data
+                const [animeData, staffData, reviewsData] = await Promise.all([
+                    fetchAnimeDetails(animeId),
+                    fetchAnimeStaff(animeId).catch(() => null),
+                    fetchAnimeReviews(animeId, 1).catch(() => null)
+                ]);
+
+                // Render sections
+                renderHeroSection(animeData);
+                renderSynopsis(animeData);
+                
+                // Background
+                if (animeData.background) {
+                    document.getElementById('background-text').textContent = animeData.background;
+                } else {
+                    document.getElementById('background-section').style.display = 'none';
+                }
+                
+                renderInfoCards(animeData);
+                renderStatistics(animeData);
+                
+                if (staffData) {
+                    renderStaff(staffData);
+                } else {
+                    document.getElementById('staff-section').style.display = 'none';
+                }
+                
+                if (reviewsData && reviewsData.data) {
+                    renderReviews(reviewsData.data);
+                    setupReviewsPagination(reviewsData.pagination);
+                } else {
+                    document.getElementById('reviews-section').style.display = 'none';
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading details:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'flex';
+                document.getElementById('error-message').textContent = 
+                    error.message || 'Failed to load details. Please try again later.';
+            }
+        }
+
+        async function loadReviewsPage(page) {
+            try {
+                const reviewsData = await fetchAnimeReviews(1735, page);
+                if (reviewsData && reviewsData.data) {
+                    renderReviews(reviewsData.data);
+                    setupReviewsPagination(reviewsData.pagination);
+                    currentReviewsPage = page;
+                }
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+            }
+        }
+
+        function setupReviewsPagination(pagination) {
+            if (!pagination || !pagination.has_next_page) {
+                document.getElementById('reviews-pagination').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('reviews-pagination').style.display = 'flex';
+            document.getElementById('reviews-page-info').textContent = 
+                `Page ${currentReviewsPage} of ${pagination.last_visible_page || 1}`;
+
+            document.getElementById('prev-reviews').disabled = currentReviewsPage === 1;
+            document.getElementById('next-reviews').disabled = 
+                !pagination.has_next_page || currentReviewsPage >= (pagination.last_visible_page || 1);
+        }
+
+        // Event listeners
+        document.getElementById('retry-btn').addEventListener('click', loadDetails);
+        document.getElementById('prev-reviews').addEventListener('click', () => {
+            if (currentReviewsPage > 1) {
+                loadReviewsPage(currentReviewsPage - 1);
+            }
+        });
+        document.getElementById('next-reviews').addEventListener('click', () => {
+            loadReviewsPage(currentReviewsPage + 1);
+        });
+
+        loadDetails();
+    </script>
+</body>
+</html>

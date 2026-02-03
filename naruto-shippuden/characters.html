@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Characters - Naruto Shippuden</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navigation"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading characters...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="error-container" style="display: none;">
+        <div class="error-content">
+            <h2>Oops! Something went wrong</h2>
+            <p id="error-message"></p>
+            <button id="retry-btn" class="retry-btn">Retry</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" style="display: none;">
+        <!-- Page Header -->
+        <section class="page-header">
+            <div class="container">
+                <h1 class="page-title">Characters</h1>
+                <p class="page-subtitle">Explore the cast of Naruto Shippuden</p>
+            </div>
+        </section>
+
+        <!-- Characters Section -->
+        <section class="details-section">
+            <div class="container">
+                <!-- Filter/Sort Options -->
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label for="role-filter">Filter by Role:</label>
+                        <select id="role-filter" class="filter-select">
+                            <option value="all">All Characters</option>
+                            <option value="Main">Main</option>
+                            <option value="Supporting">Supporting</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sort-filter">Sort by:</label>
+                        <select id="sort-filter" class="filter-select">
+                            <option value="popularity">Popularity</option>
+                            <option value="name">Name (A-Z)</option>
+                            <option value="role">Role</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Characters Grid -->
+                <div id="characters-section" class="info-section">
+                    <div id="characters-grid" class="characters-grid"></div>
+                    <div id="characters-loading" class="loading-message" style="display: none;">
+                        Loading more characters...
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="scripts/api.js"></script>
+    <script src="scripts/navigation.js"></script>
+    <script src="scripts/ui.js"></script>
+    <script>
+        let allCharacters = [];
+        let filteredCharacters = [];
+
+        async function loadCharacters() {
+            try {
+                document.getElementById('loading').style.display = 'flex';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('main-content').style.display = 'none';
+
+                const charactersData = await fetchAnimeCharacters(1735);
+                
+                if (charactersData) {
+                    allCharacters = charactersData;
+                    filteredCharacters = [...allCharacters];
+                    renderCharacters(filteredCharacters);
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading characters:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'flex';
+                document.getElementById('error-message').textContent = 
+                    error.message || 'Failed to load characters. Please try again later.';
+            }
+        }
+
+        function filterCharacters() {
+            const roleFilter = document.getElementById('role-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+
+            filteredCharacters = [...allCharacters];
+
+            // Filter by role
+            if (roleFilter !== 'all') {
+                filteredCharacters = filteredCharacters.filter(char => char.role === roleFilter);
+            }
+
+            // Sort
+            filteredCharacters.sort((a, b) => {
+                if (sortFilter === 'name') {
+                    return (a.character.name || '').localeCompare(b.character.name || '');
+                } else if (sortFilter === 'role') {
+                    return (a.role || '').localeCompare(b.role || '');
+                }
+                // Default: popularity (favorites count)
+                const aFavs = a.character.favorites || 0;
+                const bFavs = b.character.favorites || 0;
+                return bFavs - aFavs;
+            });
+
+            renderCharacters(filteredCharacters);
+        }
+
+        // Event listeners
+        document.getElementById('retry-btn').addEventListener('click', loadCharacters);
+        document.getElementById('role-filter').addEventListener('change', filterCharacters);
+        document.getElementById('sort-filter').addEventListener('change', filterCharacters);
+
+        loadCharacters();
+    </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episodes - Naruto Shippuden</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navigation"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading episodes...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="error-container" style="display: none;">
+        <div class="error-content">
+            <h2>Oops! Something went wrong</h2>
+            <p id="error-message"></p>
+            <button id="retry-btn" class="retry-btn">Retry</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" style="display: none;">
+        <!-- Page Header -->
+        <section class="page-header">
+            <div class="container">
+                <h1 class="page-title">Episodes</h1>
+                <p class="page-subtitle">All 500 episodes of Naruto Shippuden</p>
+            </div>
+        </section>
+
+        <!-- Episodes Section -->
+        <section class="details-section">
+            <div class="container">
+                <!-- Search and Filter -->
+                <div class="filter-section">
+                    <div class="search-box">
+                        <input type="text" id="episode-search" class="search-input" placeholder="Search episodes...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="episode-sort">Sort by:</label>
+                        <select id="episode-sort" class="filter-select">
+                            <option value="number">Episode Number</option>
+                            <option value="title">Title (A-Z)</option>
+                            <option value="date">Air Date</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Episodes List -->
+                <div id="episodes-section" class="info-section">
+                    <div id="episodes-list" class="episodes-list"></div>
+                    <div id="episodes-pagination" class="pagination" style="display: none;">
+                        <button id="prev-episodes" class="pagination-btn">Previous</button>
+                        <span id="episodes-page-info" class="page-info"></span>
+                        <button id="next-episodes" class="pagination-btn">Next</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="scripts/api.js"></script>
+    <script src="scripts/navigation.js"></script>
+    <script src="scripts/ui.js"></script>
+    <script>
+        let currentEpisodesPage = 1;
+        let allEpisodes = [];
+        let filteredEpisodes = [];
+
+        async function loadEpisodes(page = 1) {
+            try {
+                if (page === 1) {
+                    document.getElementById('loading').style.display = 'flex';
+                    document.getElementById('error').style.display = 'none';
+                    document.getElementById('main-content').style.display = 'none';
+                }
+
+                const episodesData = await fetchAnimeEpisodes(1735, page);
+                
+                if (episodesData && episodesData.data) {
+                    if (page === 1) {
+                        allEpisodes = episodesData.data;
+                    } else {
+                        allEpisodes = [...allEpisodes, ...episodesData.data];
+                    }
+                    
+                    filteredEpisodes = [...allEpisodes];
+                    renderEpisodes(filteredEpisodes, page);
+                    setupEpisodesPagination(episodesData.pagination);
+                }
+
+                if (page === 1) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('main-content').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading episodes:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'flex';
+                document.getElementById('error-message').textContent = 
+                    error.message || 'Failed to load episodes. Please try again later.';
+            }
+        }
+
+        function filterEpisodes() {
+            const searchTerm = document.getElementById('episode-search').value.toLowerCase();
+            const sortBy = document.getElementById('episode-sort').value;
+
+            filteredEpisodes = allEpisodes.filter(episode => {
+                const title = (episode.title || '').toLowerCase();
+                return title.includes(searchTerm);
+            });
+
+            // Sort
+            filteredEpisodes.sort((a, b) => {
+                if (sortBy === 'title') {
+                    return (a.title || '').localeCompare(b.title || '');
+                } else if (sortBy === 'date') {
+                    const dateA = a.aired ? new Date(a.aired) : new Date(0);
+                    const dateB = b.aired ? new Date(b.aired) : new Date(0);
+                    return dateB - dateA;
+                }
+                // Default: episode number
+                return (a.mal_id || 0) - (b.mal_id || 0);
+            });
+
+            renderEpisodes(filteredEpisodes, currentEpisodesPage);
+        }
+
+        function setupEpisodesPagination(pagination) {
+            if (!pagination || !pagination.has_next_page) {
+                document.getElementById('episodes-pagination').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('episodes-pagination').style.display = 'flex';
+            document.getElementById('episodes-page-info').textContent = 
+                `Page ${currentEpisodesPage} of ${pagination.last_visible_page || 1}`;
+
+            document.getElementById('prev-episodes').disabled = currentEpisodesPage === 1;
+            document.getElementById('next-episodes').disabled = 
+                !pagination.has_next_page || currentEpisodesPage >= (pagination.last_visible_page || 1);
+        }
+
+        // Event listeners
+        document.getElementById('retry-btn').addEventListener('click', () => loadEpisodes(1));
+        document.getElementById('prev-episodes').addEventListener('click', () => {
+            if (currentEpisodesPage > 1) {
+                currentEpisodesPage--;
+                loadEpisodes(currentEpisodesPage);
+            }
+        });
+        document.getElementById('next-episodes').addEventListener('click', () => {
+            currentEpisodesPage++;
+            loadEpisodes(currentEpisodesPage);
+        });
+        document.getElementById('episode-search').addEventListener('input', filterEpisodes);
+        document.getElementById('episode-sort').addEventListener('change', filterEpisodes);
+
+        loadEpisodes(1);
+    </script>
+</body>
+</html>

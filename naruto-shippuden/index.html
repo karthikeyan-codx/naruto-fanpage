@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naruto Shippuden - Home</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <div id="navigation"></div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading Naruto Shippuden details...</p>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error" class="error-container" style="display: none;">
+        <div class="error-content">
+            <h2>Oops! Something went wrong</h2>
+            <p id="error-message"></p>
+            <button id="retry-btn" class="retry-btn">Retry</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" style="display: none;">
+        <!-- Hero Section -->
+        <section id="hero-section" class="hero-section">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 id="hero-title" class="hero-title"></h1>
+                <p id="hero-title-jp" class="hero-title-jp"></p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Score</span>
+                        <span id="hero-score" class="stat-value"></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Episodes</span>
+                        <span id="hero-episodes" class="stat-value"></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Status</span>
+                        <span id="hero-status" class="stat-value"></span>
+                    </div>
+                </div>
+                <div class="hero-actions">
+                    <a href="details.html" class="btn btn-primary">View Details</a>
+                    <a href="characters.html" class="btn btn-secondary">Explore Characters</a>
+                    <a href="episodes.html" class="btn btn-secondary">Browse Episodes</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Overview Section -->
+        <section class="details-section">
+            <div class="container">
+                <!-- Synopsis -->
+                <div id="synopsis-section" class="info-section">
+                    <h2 class="section-title">Synopsis</h2>
+                    <p id="synopsis-text" class="synopsis-text"></p>
+                </div>
+
+                <!-- Quick Stats -->
+                <div id="statistics-section" class="info-section">
+                    <h2 class="section-title">Quick Statistics</h2>
+                    <div id="statistics-content" class="statistics-grid"></div>
+                </div>
+
+                <!-- Key Information Cards -->
+                <div id="info-cards-section" class="info-section">
+                    <h2 class="section-title">Key Information</h2>
+                    <div id="info-cards" class="info-cards-grid"></div>
+                </div>
+
+                <!-- Featured Characters Preview -->
+                <div id="characters-preview" class="info-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Featured Characters</h2>
+                        <a href="characters.html" class="view-all-link">View All →</a>
+                    </div>
+                    <div id="characters-grid" class="characters-grid"></div>
+                </div>
+
+                <!-- Recommendations -->
+                <div id="recommendations-section" class="info-section">
+                    <h2 class="section-title">Similar Anime</h2>
+                    <div id="recommendations-grid" class="recommendations-grid"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="scripts/api.js"></script>
+    <script src="scripts/navigation.js"></script>
+    <script src="scripts/ui.js"></script>
+    <script>
+        async function loadHomeData() {
+            try {
+                document.getElementById('loading').style.display = 'flex';
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('main-content').style.display = 'none';
+
+                const animeId = 1735;
+                
+                // Fetch main data
+                const animeData = await fetchAnimeDetails(animeId);
+                
+                // Fetch preview data
+                const [charactersData, recommendationsData] = await Promise.all([
+                    fetchAnimeCharacters(animeId).catch(() => null),
+                    fetchAnimeRecommendations(animeId).catch(() => null)
+                ]);
+
+                // Render sections
+                renderHeroSection(animeData);
+                renderSynopsis(animeData);
+                renderStatistics(animeData);
+                renderInfoCards(animeData);
+                
+                if (charactersData) {
+                    renderCharactersPreview(charactersData, 6);
+                }
+                
+                if (recommendationsData) {
+                    renderRecommendations(recommendationsData);
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'flex';
+                document.getElementById('error-message').textContent = 
+                    error.message || 'Failed to load anime data. Please try again later.';
+            }
+        }
+
+        document.getElementById('retry-btn').addEventListener('click', loadHomeData);
+        loadHomeData();
+    </script>
+</body>
+</html>
